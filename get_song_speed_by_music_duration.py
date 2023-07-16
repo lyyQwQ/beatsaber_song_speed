@@ -62,6 +62,7 @@ def move_song_to_folder(song_path, speed):
     # os.rename(song_path, target_path)
     # 如果文件已经存在，则不移动
     if not os.path.exists(target_path):
+        # print(f'song_path: {song_path}, target_path: {target_path}, 是否存在song_path: {os.path.exists(song_path)}')
         os.rename(song_path, target_path)
 
 
@@ -71,6 +72,7 @@ def classify_songs(base_dir):
     song_dict = {}
     # 遍历所有info文件
     for song_folder in os.listdir(base_dir):
+        # print("当前歌曲文件夹路径", song_folder)
         info_path = os.path.join(base_dir, song_folder, "info.dat")
         if not os.path.exists(info_path):
             continue
@@ -100,7 +102,7 @@ def classify_songs(base_dir):
         print("速度：", speed)
         song_dict[(song_name, song_author)] = speed
         # 移动歌曲文件
-        move_song_to_folder(song_folder, speed)
+        move_song_to_folder(os.path.join(base_dir, song_folder), speed)
     return song_dict
 
 
