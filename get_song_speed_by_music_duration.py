@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 
 # from pydub.utils import mediainfo
 import mutagen
@@ -46,6 +47,7 @@ def get_block_and_time(beatmap_path, bpm):
     # print(total_blocks)
     return total_blocks
 
+
 # @brief: 将歌曲移动到对应的文件夹
 # @param song_path: 歌曲路径
 # @param speed: 歌曲速度
@@ -76,7 +78,12 @@ def move_song_to_folder(song_path, speed, max_songs=50):
         existed_folder = os.path.join(os.path.dirname(song_path), "已存在")
         if not os.path.exists(existed_folder):
             os.makedirs(existed_folder)
-        os.rename(song_path, os.path.join(existed_folder, os.path.basename(song_path)))
+        # 如果"已存在"文件夹中已经存在同名文件，则删除，否则移动
+        if os.path.exists(os.path.join(existed_folder, os.path.basename(song_path))):
+            # 删除该文件夹，不管是否为空
+            shutil.rmtree(song_path)
+        else:
+            os.rename(song_path, os.path.join(existed_folder, os.path.basename(song_path)))
 
 
 # @brief: 获取所有谱面的方块数和时间
@@ -102,13 +109,15 @@ def classify_songs(base_dir):
         # 获取音频的时长
         audio_duration = get_audio_duration(audio_path)
         # print("音频时长：", audio_duration)
-        beatmap_paths = [os.path.join(os.path.dirname(info_path), f) for f in os.listdir(os.path.dirname(info_path)) if f.endswith('.dat')]
+        beatmap_paths = [os.path.join(os.path.dirname(info_path), f) for f in os.listdir(os.path.dirname(info_path)) if
+                         f.endswith('.dat')]
         # print(beatmap_paths)
         # 去除info文件路径
         beatmap_paths = [path for path in beatmap_paths if path != info_path]
         max_blocks = 0
         for beatmap_path in beatmap_paths:
             total_blocks = get_block_and_time(beatmap_path, bpm)
+            # 莫名其妙的bug，我上面的函数已经只返回一个值了，但有的时候返回来的还是元组，所以这里再判断一下
             if type(total_blocks) is tuple:
                 total_blocks = total_blocks[0]
             if total_blocks > max_blocks:
