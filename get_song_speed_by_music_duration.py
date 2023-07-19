@@ -57,7 +57,9 @@ def move_song_to_folder(song_path, speed, max_songs=50):
     speed_category = min(int(speed), 12)
     speed_folder_name = str(speed_category)
     if speed_category >= 12:
-        speed_folder_name = "12+"
+        speed_folder_name = "12以上"
+    # todo 移动到CustomMusic文件夹下
+    # target_folder = os.path.join(os.path.dirname(song_path), "CustomMusic", speed_folder_name)
     target_folder = os.path.join(os.path.dirname(song_path), speed_folder_name)
     # Check how many songs already exist in the folder
     subfolder_counter = 1
@@ -69,6 +71,7 @@ def move_song_to_folder(song_path, speed, max_songs=50):
     if not os.path.exists(current_target_folder):
         os.makedirs(current_target_folder)
     # Move song file
+
     target_path = os.path.join(current_target_folder, os.path.basename(song_path))
     # 如果文件存在则移动到"已存在"文件夹
     if not os.path.exists(target_path):
