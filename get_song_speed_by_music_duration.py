@@ -1,15 +1,15 @@
 import os
 import json
 
-from pydub.utils import mediainfo
+# from pydub.utils import mediainfo
+import mutagen
 
 
 # @brief: 获取音频文件的时长
 # @param audio_path: 音频文件路径
 # @return: 音频文件的时长
 def get_audio_duration(audio_path):
-    audio_info = mediainfo(audio_path)
-    duration = float(audio_info["duration"])
+    duration = mutagen.File(audio_path).info.length
     # 前后包含静音部分，可能没有谱面，所以减去1秒
     return duration - 1
 
@@ -43,26 +43,40 @@ def get_block_and_time(beatmap_path, bpm):
 
     # 输出块数和时间，时间显示为几分几秒
     # print(total_blocks, total_time_in_seconds // 60, total_time_in_seconds % 60)
-    print(total_blocks)
+    # print(total_blocks)
     return total_blocks
 
-
-def move_song_to_folder(song_path, speed):
+# @brief: 将歌曲移动到对应的文件夹
+# @param song_path: 歌曲路径
+# @param speed: 歌曲速度
+# @param max_songs: 每个子文件夹最多的歌曲数
+def move_song_to_folder(song_path, speed, max_songs=50):
     # 根据速度决定要移动到哪个文件夹
-    speed_category = min(int(speed), 10)
+    speed_category = min(int(speed), 12)
     speed_folder_name = str(speed_category)
-    if speed_category >= 10:
-        speed_folder_name = "10+"
+    if speed_category >= 12:
+        speed_folder_name = "12+"
     target_folder = os.path.join(os.path.dirname(song_path), speed_folder_name)
-    # 如果目标文件夹不存在，创建它
-    if not os.path.exists(target_folder):
-        os.mkdir(target_folder)
-    # 移动歌曲文件
-    target_path = os.path.join(target_folder, os.path.basename(song_path))
-    # os.rename(song_path, target_path)
-    # 如果文件已经存在，则不移动
+    # Check how many songs already exist in the folder
+    subfolder_counter = 1
+    current_target_folder = target_folder
+    while os.path.exists(current_target_folder) and len(os.listdir(current_target_folder)) >= max_songs:
+        subfolder_counter += 1
+        current_target_folder = f"{target_folder}-{subfolder_counter}"
+    # If the target folder doesn't exist, create it
+    if not os.path.exists(current_target_folder):
+        os.makedirs(current_target_folder)
+    # Move song file
+    target_path = os.path.join(current_target_folder, os.path.basename(song_path))
+    # 如果文件存在则移动到"已存在"文件夹
     if not os.path.exists(target_path):
+        # print(f'song_path: {song_path}, target_path: {target_path}, 是否存在song_path: {os.path.exists(song_path)}')
         os.rename(song_path, target_path)
+    else:
+        existed_folder = os.path.join(os.path.dirname(song_path), "已存在")
+        if not os.path.exists(existed_folder):
+            os.makedirs(existed_folder)
+        os.rename(song_path, os.path.join(existed_folder, os.path.basename(song_path)))
 
 
 # @brief: 获取所有谱面的方块数和时间
@@ -71,9 +85,14 @@ def classify_songs(base_dir):
     song_dict = {}
     # 遍历所有info文件
     for song_folder in os.listdir(base_dir):
+        # print("当前歌曲文件夹路径", song_folder)
         info_path = os.path.join(base_dir, song_folder, "info.dat")
+        # print(info_path)
         if not os.path.exists(info_path):
-            continue
+            info_path = os.path.join(base_dir, song_folder, "Info.dat")
+            if not os.path.exists(info_path):
+                # print("info文件不存在", info_path)
+                continue
             # 获取歌曲名、作者名和bpm
         song_name, song_author, bpm = get_song_info_and_bpm(info_path)
         # 获取音频文件的路径
@@ -84,7 +103,7 @@ def classify_songs(base_dir):
         audio_duration = get_audio_duration(audio_path)
         # print("音频时长：", audio_duration)
         beatmap_paths = [os.path.join(os.path.dirname(info_path), f) for f in os.listdir(os.path.dirname(info_path)) if f.endswith('.dat')]
-        print(beatmap_paths)
+        # print(beatmap_paths)
         # 去除info文件路径
         beatmap_paths = [path for path in beatmap_paths if path != info_path]
         max_blocks = 0
@@ -95,12 +114,12 @@ def classify_songs(base_dir):
             if total_blocks > max_blocks:
                 max_blocks = total_blocks
 
-        print("方块数：", max_blocks)
+        # print("方块数：", max_blocks)
         speed = max_blocks / audio_duration
-        print("速度：", speed)
+        # print("速度：", speed)
         song_dict[(song_name, song_author)] = speed
         # 移动歌曲文件
-        move_song_to_folder(song_folder, speed)
+        move_song_to_folder(os.path.join(base_dir, song_folder), speed)
     return song_dict
 
 
